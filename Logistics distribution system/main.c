@@ -14,7 +14,7 @@ typedef struct  Goods //货物的节点
 typedef struct Truck
 {
 	int standardLoad;  //卡车的标准载重 
-	int actualLoad; //卡车的实际载重 
+	int residualLoad; //卡车的剩余载重 
 	int goods[MAXNUM];
 }Truck;
 
@@ -63,7 +63,7 @@ int initialize(Graph * placeGraph,Truck *truck)  //初始化
 		placeGraph->vertex[i].cargo = NULL;
 		placeGraph->vertex[i].placeName[0] = '\0'; //地点名字初始化为空 
 	}
-	truck->actualLoad = 0;
+	truck->residualLoad = MAXLOAD;
 	truck->standardLoad = MAXLOAD;
 	for(i=0; i<MAXNUM; i++ )
 	{
@@ -150,7 +150,7 @@ int loadUp(Graph * placeGraph)
 	printf("All the goods have already been loaded!\n");
 } 
 
-int checkCargo(Graph * p)
+int checkCargo(Graph * p)   //输出货物信息 
 {
 	int i;
 	Cargo *temp = NULL;
@@ -165,13 +165,43 @@ int checkCargo(Graph * p)
 	}
 }
 
-int begantransport(Truck * truck)
+Cargo * onTruck(Truck * truck, Cargo *head, int collected[MAXNUM])   //把货物装上车 
+{
+	Cargo * ret = NULL;
+	Cargo * temp = NULL;
+	while(head)
+	{
+		temp = head;
+		head = head->next;
+		if (!collected[temp->goal] && temp->weight <= truck->residualLoad)   //如果还没有经过目的节点 而且火车还装的下 
+		{
+			truck->goods[temp->goal] +=  temp->weight;  //进行装载 
+			truck->residualLoad -= temp->weight;
+			free(temp);
+		}
+		else
+		{
+			temp->next = ret;    //否则的话把该货物信息保存用以返还； 
+			ret = temp;
+		}
+		
+	}
+	return ret;
+}
+
+int begantransport(Truck * truck, Graph * graph, int cost[][MAXNUM])
 {
 	int i = 0;
 	int n = 0;
-	int collected[MAXNUM];
+	int collected[MAXNUM];   //表示已经经过的定点 0 表示没走过  1表示走过了 
+	for (i=0; i<MAXNUM; i++)
+	{
+		collected[i] = 0;
+	} 
 	printf("Please enter the truck starting the place of departure \n");
 	scanf("%d",&n);
+	graph->vertex[n].cargo = onTruck(truck,graph->vertex[n].cargo,collected);  // 装货上车 
+	
 	
 	
 	return 0;
