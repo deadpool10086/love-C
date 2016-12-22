@@ -4,6 +4,13 @@
 #define MAXNUM 30
 #define FAR 100000
 
+typedef struct stack
+{
+	int * data;
+	int *top;
+}Stack;
+
+
 typedef struct  Goods //»õÎïµÄ½Úµã
 {
 	int goal;     //»õÎïÄ¿µÄµØ 
@@ -16,6 +23,7 @@ typedef struct Truck
 	int standardLoad;  //¿¨³µµÄ±ê×¼ÔØÖØ 
 	int residualLoad; //¿¨³µµÄÊ£ÓàÔØÖØ 
 	int goods[MAXNUM];
+	Stack path;
 }Truck;
 
 typedef struct Enode
@@ -69,6 +77,8 @@ int initialize(Graph * placeGraph,Truck *truck)  //³õÊ¼»¯
 	{
 		truck->goods[i] = 0;
 	}
+	truck->path.data = (int *)malloc(MAXNUM*sizeof(int));
+	truck->path.top = truck->path.data; 
 	return 0;
 }
 
@@ -99,7 +109,7 @@ int checkView(int data[][MAXNUM],int n)  //²é¿´¶şÎ¬Êı×éÄÚÈİ n×÷ÎªÊı×é´óĞ¡
 	for(i=0; i<n; i++)
 	{
 		for(j=0; j<n; j++)
-			printf("%d\t",(data[i][j]==FAR)?-1:data[i][j]);
+			printf("%d\t",(data[i][j]==FAR)?-7:data[i][j]);
 		printf("\n");
 	}
 	return 0;
@@ -110,18 +120,18 @@ int Floyd(Graph *p,int cost[MAXNUM][MAXNUM],int path[MAXNUM][MAXNUM])
 	int i = 0;
 	int j = 0;
 	int k = 0;
-	for(i=0; i<MAXNUM; i++)
-		for(j=0; j<MAXNUM; j++)
+	for(i=0; i<p->vn; i++)
+		for(j=0; j<p->vn; j++)
 			{
 				cost[i][j] = p->graph[i][j];
 				path[i][j] = -1;
 			}
-	for(i=0; i<MAXNUM; i++)    //°Ñi½Úµã²åÈëÃ¿¸öÂ·¾¶µ±ÖĞ¿´ÊÇ·ñÄÜÊ¹Æä¾àÀëËõ¶Ì 
-		for(j=0; j<MAXNUM; j++)
+	for(i=0; i<p->vn; i++)    //°Ñi½Úµã²åÈëÃ¿¸öÂ·¾¶µ±ÖĞ¿´ÊÇ·ñÄÜÊ¹Æä¾àÀëËõ¶Ì 
+		for(j=0; j<p->vn; j++)
 		{
 			if (i == j)
 				continue; 
-			for(k=0; k<MAXNUM; k++)
+			for(k=0; k<p->vn; k++)
 			{
 				if(cost[j][i] + cost[i][k] < cost[j][k])
 				{
@@ -165,6 +175,21 @@ int checkCargo(Graph * p)   //Êä³ö»õÎïĞÅÏ¢
 	}
 }
 
+int onPath(Stack * s,int n) //¼ì²éÊÇ·ñË³µÀ 
+{
+	int *p = NULL;
+	int ret = 0;
+	for(p=s->top; p!=s->data; p++)
+	{
+		if (*p == n)
+		{
+			ret = 1;
+			break;
+		}
+	}
+	return ret;
+}
+
 Cargo * onTruck(Truck * truck, Cargo *head, int collected[MAXNUM])   //°Ñ»õÎï×°ÉÏ³µ 
 {
 	Cargo * ret = NULL;
@@ -173,7 +198,7 @@ Cargo * onTruck(Truck * truck, Cargo *head, int collected[MAXNUM])   //°Ñ»õÎï×°É
 	{
 		temp = head;
 		head = head->next;
-		if (!collected[temp->goal] && temp->weight <= truck->residualLoad)   //Èç¹û»¹Ã»ÓĞ¾­¹ıÄ¿µÄ½Úµã ¶øÇÒ»ğ³µ»¹×°µÄÏÂ 
+		if ((collected[temp->goal] || onPath(&truck->path,temp->goal)) && temp->weight <= truck->residualLoad)   //Èç¹û»¹Ã»ÓĞ¾­¹ıÄ¿µÄ½Úµã ¶øÇÒ»ğ³µ»¹×°µÄÏÂ 
 		{
 			truck->goods[temp->goal] +=  temp->weight;  //½øĞĞ×°ÔØ 
 			truck->residualLoad -= temp->weight;
@@ -189,21 +214,114 @@ Cargo * onTruck(Truck * truck, Cargo *head, int collected[MAXNUM])   //°Ñ»õÎï×°É
 	return ret;
 }
 
-int begantransport(Truck * truck, Graph * graph, int cost[][MAXNUM])
+int pick(int n, int vn, int condition[MAXNUM], int cost[][MAXNUM])  //¸ù¾İÏŞÖÆÌõ¼ş Ñ¡Ôñ×î¶ÌÂ·¾¶ 
+{
+	int ret = -1;  //³õÊ¼»¯Îª -1 
+	int min = FAR;
+	int i = 0;
+	for (i=0; i<vn; i++)
+	{
+		if (condition[i] && cost[n][i] < min)
+		{
+			min = cost[n][i];
+			ret = i;
+		}
+	}
+	return ret;
+}
+
+int pickDestination(int n, Truck * truck, int vn, int cost[][MAXNUM], int collected[])  //ÌôÑ¡ÏÂ¸öÄ¿µÄµØ  n±íÊ¾³ö·¢µã 
+{
+	int truckStatu = 0;
+	int	vertexStatu = 0;
+	int i = 0;
+	int ret; 
+	for(i=0; i<vn; i++)
+	{
+		truckStatu = truckStatu | (truck->goods[i]);
+	}
+	for(i=0; i<vn; i++)
+	{
+		vertexStatu = vertexStatu | (collected[i]);
+	}
+	
+	
+	if(truckStatu)   //Èç¹û»¹ÓĞ»õÎï Ñ¡Ò»¸öÒªËÍµÄ×î½üµÄ 
+	{
+		ret = pick(n, vn, truck->goods, cost);
+	}
+	else if(vertexStatu)  // Èç¹û»¹ÓĞÃ»È¥µÄ½Úµã Ñ¡Ò»¸öÃ»È¥µÄ×î½üµÄ 
+	{
+	 	ret = pick(n, vn, collected, cost);
+	}
+	else              //Èç¹û¶¼ËÍÍêÁËÒ²×ßÍêÁËÒÔµ±Ç°ÎªÔ´Í·ÔÙ×ßÒ»±é 
+	{
+		for(i = 0; i<vn; i++)
+		{
+			collected[i] = 1;
+		}
+		collected[n] = 0;
+		ret = pick(n, vn, collected, cost); 
+	}
+}
+
+int loadPath(int s, int t,Truck* truck, int path[][MAXNUM])  //s´ú±íÔ´Ä¿µÄµØ£¬ t´ú±íÄ¿µÄµØÖ· 
+{
+	while(path[s][t] != -1)
+	{
+		t = path[s][t];
+		*truck->path.top++ = t;
+	}
+	return 0;
+}
+
+int onTheWay(Truck * truck)
+{
+	while(truck->path.top != truck->path.data)
+	{
+		truck->path.top--;
+		printf("The truck passed by %d\n",*truck->path.top);
+		printf("Unloading\n");
+		truck->residualLoad += truck->goods[*truck->path.top];
+		truck->goods[*truck->path.top] = 0;
+		printf("Move on\n");
+	}
+}
+
+int begantransport(Truck * truck, Graph * graph, int cost[][MAXNUM], int path[][MAXNUM])
 {
 	int i = 0;
 	int n = 0;
-	int collected[MAXNUM];   //±íÊ¾ÒÑ¾­¾­¹ıµÄ¶¨µã 0 ±íÊ¾Ã»×ß¹ı  1±íÊ¾×ß¹ıÁË 
-	for (i=0; i<MAXNUM; i++)
+	int source;
+	int collected[MAXNUM];   //±íÊ¾ÒÑ¾­¾­¹ıµÄ¶¨µã 1 ±íÊ¾Ã»×ß¹ı  0±íÊ¾×ß¹ıÁË 
+	for (i=0; i<graph->vn; i++)
 	{
-		collected[i] = 0;
+		collected[i] = 1;
 	} 
 	printf("Please enter the truck starting the place of departure \n");
 	scanf("%d",&n);
-	graph->vertex[n].cargo = onTruck(truck,graph->vertex[n].cargo,collected);  // ×°»õÉÏ³µ 
-	
-	
-	
+	while(n >= 0)
+	{
+		printf("Starting from the %d \n",n);
+		collected[n] = 0;	// ÊÕ¼¯¸Ã¶¨µã 
+		source = n;
+		n = pickDestination(n, truck, graph->vn, cost, collected);  //ÌôÑ¡½Úµã 
+		if(n == -1)
+		{
+			printf("The picture is not a connected graph\n");
+			return -1;
+		} 
+		printf("The next place %d\n",n);
+		loadPath(source, n, truck, path);  //Ïò¿¨³µÀï¼ÓÈëÂ·¾¶ 
+		graph->vertex[n].cargo = onTruck(truck,graph->vertex[n].cargo,collected);  // ×°»õÉÏ³µ 
+		onTheWay(truck);  //ÑØÂ·¾­¹ı 
+		printf("Has reached the %d\n",n);
+		printf("Unloading\n");
+		truck->residualLoad += truck->goods[n];
+		truck->goods[n] = 0;
+		printf("keep go on£¿");
+		getchar(); 
+	}
 	return 0;
 }
 
@@ -221,9 +339,9 @@ int main()
 	int cost[MAXNUM][MAXNUM],path[MAXNUM][MAXNUM];
 	Floyd(placeGraph,cost,path);
 	
-//	checkView(path,placeGraph->vn);   //²é¿´Êı×éÖĞµÄÄÚÈİ;
+//	checkView(cost,placeGraph->vn);   //²é¿´Êı×éÖĞµÄÄÚÈİ;
 //	checkCargo(placeGraph);				//²é¿´»õÎïµÄÄÚÈİ;  
-	begantransport(truck);    //Æô¶¯Æû³µÔËÊäº¯Êı 
+	begantransport(truck, placeGraph, cost, path);    //Æô¶¯Æû³µÔËÊäº¯Êı 
 	
 	
 	free(truck);
