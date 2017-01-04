@@ -7,7 +7,7 @@ int aw = 0;
 
 void CALLBACK TimeProc(HWND hwnd, UINT message, UINT idTimer, DWORD dwTime)
 {
-	aw ++;
+	aw++;
 	cout << aw << endl;
 }
 
@@ -15,7 +15,7 @@ int main()
 {
 	DWORD dwThreadId;
 	
-	SetTimer(NULL, 10, 1000, TimeProc);
+	SetTimer(NULL, 10, 10, TimeProc);
 	cin.get();
 	return 0;
 }

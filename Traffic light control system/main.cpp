@@ -2,16 +2,165 @@
 #include <windows.h>
 #define MAXNUM 4
 
-enum {SHUT = 2,GREEN = 1,RED = -1,YELLOW = 0};
-/* run this program using the console pauser or add your own getch, system("pause") or input loop */
 using namespace std;
 
+enum {SHUT = 2,GREEN = 1,RED = -1,YELLOW = 0};
 
 struct Vertex
 {
+	int index; //编号 
+	int degree;  //度 
+	int color; //该节点颜色 
+	Vertex()
+	{
+		index = 0;
+		degree = 0;
+		color = 0;
+	}
+};
+
+struct Graph
+{
+	private:
+		bool com0(int a, int b)  //按照度从高到低排列 
+		{
+			return a>b;
+		}
+		bool com1(int a, int b)  // 按照度从低到高排列 
+		{
+			return a<b;
+		}
+	
+public: 
+	int vn;
+	int en;
+	int **graph;
+	Vertex * vertexs;
+	int sumColor;
+	
+	Graph()
+	{
+		vn = 0;
+		en = 0;
+		graph = 0;
+		vertexs = 0;	
+	}
+	~Graph()
+	{
+		delete[] vertexs;
+		for(int i=0; i<vn; i++)
+		{
+			delete[] graph[i];
+		}
+		delete[] graph;
+	}
+	void build()  // 进行数据的输入 
+	{
+		cin >> vn >> en;
+		vertexs = new Vertex[vn];
+		graph = new int*[vn];
+		for(int i=0; i<vn; i++)
+		{
+			graph[i] = new int[vn];
+			vertexs[i].index = i;
+		}
+		
+		for(int i=0; i<vn; i++)
+		{
+			for(int j=0; j<vn; j++)
+				graph[i][j] = 0;
+			graph[i][i] = 1;  // 自己跟自己是联通状态 
+		}
+		for(int i=0; i<en; i++)
+		{
+			int v1, v2;
+			cin >> v1 >>v2;
+			graph[v1][v2] = 1;
+			graph[v2][v1] = 1;
+			vertexs[v1].degree++;
+			vertexs[v2].degree++;
+		}
+	}
+
+	
+	void sort(int flag) //排序1代表从高到低 2 代表从低到高 
+	{
+		bool (Graph::*p)(int, int);
+		if(1 == flag )
+		{
+			p = com0;
+		}
+		else if(2 == flag)
+		{
+			p = com1;
+		}
+		else
+		{
+			exit(0);
+		}
+		for(int i=1; i<vn; i++)
+		{
+			int j;
+			Vertex 	temp = vertexs[i];
+			for(j=i; j>0 && (this->*p)(temp.degree,vertexs[j-1].degree); j--)
+			{
+				vertexs[j] = vertexs[j-1];
+			}
+			vertexs[j] = temp;
+		}
+	}
+	
+	void welchPowell()
+	{
+		sort(1);
+		int k = 0;
+		while(1)
+		{
+			k++;
+			int i;
+			for(i=0; i<vn; i++)
+			{
+				if( 0 == vertexs[i].color)
+				{
+					vertexs[i].color = k;
+					break;
+				}
+			}
+			if (i == vn)
+			{
+				break; //所有节点均涂色 
+			}
+			for(int j=0; j<vn; j++)
+			{
+				if(!vertexs[j].color && !graph[vertexs[i].index][vertexs[j].index])
+				{
+					vertexs[j].color = k;
+					for(int k=0; k<vn; k++)
+					{
+						if(graph[vertexs[j].index][k])
+						{
+							graph[vertexs[i].index][k] = 1;
+						}
+					} 
+				} 
+			}
+		}
+		sumColor = k-1;
+		cout << "共需要" << k-1 << "种颜色" << endl;
+		for (int i = 0; i < vn; i++)
+        	cout<< "节点："<<vertexs[i].index <<":着色" << vertexs[i].color <<endl;
+      	return;
+	}
+	
+};
+
+
+class Light
+{
+	public:
 	int statue;
 	int before;
-	Vertex()
+	Light()
 	{
 		before = SHUT;
 		statue = SHUT;	
@@ -41,107 +190,70 @@ struct Vertex
 	}
 };
 
-struct Graph
+class Lntersection
 {
-	int vn;
-	int en;
-	int** graph;
-	Vertex* vertexs;
+	public:
+	Light* lights;
 	string toString()
 	{
 		string ret;
-		for(int i=0; i<vn; i++)
+		for(int i=0; i<MAXNUM; i++)
 		{
 			ret += "现在";
 			ret += i+'0';
-			ret += "号路口灯是：" + vertexs[i].toString() +"\n";
+			ret += "号路口灯是：" + lights[i].toString() +"\n";
 		}
 		return ret;
 	}
 	void yellow()
 	{
-		for(int i=0; i<vn; i++)
+		for(int i=0; i<MAXNUM; i++)
 		{
-			vertexs[i].statue = YELLOW; 	
+			lights[i].statue = YELLOW; 	
 		}	
 	}
 	void star(int a,int b)  //a b 是刚开始哪两个路口是红灯 
 	{
 		int s = RED;
 		int n = GREEN;
-		for(int i=0; i<vn; i++)
+		for(int i=0; i<MAXNUM; i++)
 		{
 			if(i == a || i == b)
 			{
-				vertexs[i].before = s;	
-				vertexs[i].statue = n;
+				lights[i].before = s;	
+				lights[i].statue = n;
 			}
 			else
 			{
-				vertexs[i].before = n;	
-				vertexs[i].statue = s;	
+				lights[i].before = n;	
+				lights[i].statue = s;	
 			}
 			
 		}
 	}
 	void convent()
 	{
-		for(int i=0; i<vn; i++)
+		for(int i=0; i<MAXNUM; i++)
 		{
-			vertexs[i].statue += vertexs[i].before;
-			vertexs[i].before = -vertexs[i].statue;
+			lights[i].statue += lights[i].before;
+			lights[i].before = -lights[i].statue;
 		}
 	} 
-	Graph(int num = MAXNUM,int en = 0)
+	Lntersection(int num = MAXNUM,int en = 0)
 	{
-		vn = num;
-		this->en = en; 
-		graph = new int*[num];
-		for(int i=0; i<num; i++)
-		{
-			graph[i] = new int[num];
-		}
-		vertexs = new Vertex[num];
+		lights = new Light[num];
 	}
-	~Graph()
+	~Lntersection()
 	{
-		for(int i=0; i<vn; i++)
-		{
-			delete[] graph[i];
-		}
-		delete[] graph;
-		delete[] vertexs;
+		delete[] lights;
 	}
-
-	
 };
 
 struct Parameter
 {
-	Graph * gp;
+	Lntersection * gp;
 	int * np;
 };
-
-//void CALLBACK TimeProc(HWND hwnd, UINT message, UINT idTimer, DWORD dwTime)  
-//{  
-//	printf("thread count = %d\n", 3);  
-//} 
-//DWORD CALLBACK ThreadProc(PVOID pvoid)  
-//{  
-//    MSG msg;  
-//    SetTimer(NULL, 10, 100, TimeProc);  
-//    while(GetMessage(&msg, NULL, 0, 0))  
-//    {
-//        if(msg.message == WM_TIMER)  
-//        {  
-//        	TranslateMessage(&msg);    // 翻译消息  
-//            DispatchMessage(&msg);     // 分发消息  
-//        }  
-//    } 
-//	KillTimer(NULL, 10);  
-//    return 0;  
-//}
-
 
 DWORD WINAPI control(LPVOID lpPatam)
 {
@@ -166,40 +278,40 @@ DWORD WINAPI control(LPVOID lpPatam)
 	}
 }
 
+
 int main(int argc, char** argv) {
-	Graph* graph = new Graph();
-	graph->star(1, 3);
+	Graph *graph;
+	graph = new Graph();
+	graph->build();
+	graph->welchPowell();
+
+	Lntersection* lnt= new Lntersection();
 	int i = 0;
+	lnt->star(1, 3);
 	DWORD dwThreadId;
-	//HANDLE hThread = CreateThread(NULL, 0, control, 0, 0, &dwThreadId);
-	
 	Parameter * para = (Parameter *)malloc(sizeof(Parameter));
-	para->gp = graph;
+	para->gp = lnt;
 	para->np = &i;
 	CreateThread(NULL, 0, control, para,0,&dwThreadId);
-	
-	cout << graph->toString();
+
+	cout << lnt->toString();
 	while(1)
 	{
 		Sleep(1000);
 		i++;
-		//cout << i <<endl;
 		if(i == 5)
 		{
 			i = 0;
-			graph->yellow();
+			lnt->yellow();
 			system("cls"); 
-			cout << graph->toString();
+			cout << lnt->toString();
 			Sleep(3000);
-			graph->convent();
+			lnt->convent();
 			system("cls");
-			cout << graph->toString();
+			cout << lnt->toString();
 			
 		}
 	}
 	cin.get(); 
 	return 0;
 }
-
-
- 
