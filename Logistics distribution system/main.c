@@ -263,6 +263,7 @@ int pickDestination(int n, Truck * truck, int vn, int cost[][MAXNUM], int collec
 		collected[n] = 0;
 		ret = pick(n, vn, collected, cost); 
 	}
+	return ret; 
 }
 
 int loadPath(int s, int t,Truck* truck, int path[][MAXNUM])  //s代表源目的地， t代表目的地址 
