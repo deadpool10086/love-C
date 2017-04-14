@@ -281,9 +281,26 @@ DWORD WINAPI control(LPVOID lpPatam)
 
 int main(int argc, char** argv) {
 	Graph *graph;
+	int flag = 0;
 	graph = new Graph();
-	graph->build();
-	graph->welchPowell();
+	while(flag != 3)
+	{
+		printf("请输入选择1.建立图2，进行图着色算法3，运行红绿灯\n");
+		scanf("%d",&flag);
+		switch(flag)
+		{
+			case 1:
+				graph->build();
+				break;
+			case 2:
+				graph->welchPowell();
+				break;
+			default:
+				break;
+		}
+			
+	}
+	
 
 	Lntersection* lnt= new Lntersection();
 	int i = 0;
